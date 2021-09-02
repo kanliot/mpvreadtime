@@ -8,3 +8,4 @@ the use case is when you have a list of times you want to play.   the easist way
 
 mpvreadtime will give you a prompt, since it must be run in a terminal, at which time you can start seeking in the mpv window that's playing
 
+this stand-alone perl script should work on any linux-like system with mkfifo and socat.
