@@ -1,30 +1,33 @@
 #!/usr/bin/perl
 
 # I want to type in times in a terminal window (or paste) and have mpv seek to that time immediately. 
+# this program reads line after line, and tells the mpv window that it opens, to seek to that time. 
+# doesn't give any great error message if mpv exits for a dumb reason
+# also should stop the terminal part if mpv quite
 
-# mpvs socket dox https://github.com/mpv-player/mpv/blob/master/DOCS/man/ipc.rst
-#  ^^ is a bit longer than my man file in buster
-#https://perldoc.perl.org/perlartistic
+# copyright 2021 kanliot@github
+# https://perldoc.perl.org/perlartistic for license
 
-#       mpv can be controlled by external programs using the JSON-based IPC protocol.  It can be enabled by specifying the path to a unix socket or a  named  pipe  using the option --input-ipc-server. Clients can connect to this socket and send commands to the player or receive events from it.
 
-# TODO ooops system changes pid, TODO make quitting mpv kill this script
 use strict;
-
-my $fifo='/tmp/mpvreadtime';
-`mkfifo $fifo`;
-our $pid;
-
 use 5.10.0; # for say
 
+my $fifo='/tmp/mpvreadtime';
+system 'mkfifo',$fifo;
+END { unlink $fifo }
 
-my $oldpid=$$;
+
+# bleah this killing stuff is buggy as i write it, the main thing is to kill the readline when mpv is closed. 
+# so just have the parent of the mpv process kill it's parent, that's it. 
+# honestly i don't know how to have the child kill the parent of the parent and the parent kill the child and it's child and so on and so on
+
+
+my $pid;
 if ($pid=fork) {
-	END { unlink $fifo;system 'kill', $pid if $pid; }
 } else {
-	if( my $pid=fork){  # now have child pid
-		waitpid $pid,0; # wait child to exit;
-		kill $oldpid; # kill the readline process
+	if( my $id=fork){  #  get pid of mpv
+		waitpid $id,0; # wait child to exit;
+		kill 'KILL', getpgrp 0; # kill the readline process
 		exit;
 	} else {
 		exec 'mpv','--force-window=yes',"--input-ipc-server=$fifo",'--no-terminal', @ARGV; 
@@ -36,7 +39,7 @@ say 'enter q to quit';
 
 while (<STDIN>){
 	chomp;
-	exit 0 if $_ eq 'q';
+	exit 0 if $_ eq 'q' or $_ eq 'Q';
 	my $strong=$_;
 	if(/:;/) {
 		$strong=\to_seconds($_);
@@ -67,4 +70,6 @@ sub to_seconds{
 }
 
 
+#       mpv can be controlled by external programs using the JSON-based IPC protocol.  It can be enabled by specifying the path to a unix socket or a  named  pipe  using the option --input-ipc-server. Clients can connect to this socket and send commands to the player or receive events from it.
+# mpvs socket dox https://github.com/mpv-player/mpv/blob/master/DOCS/man/ipc.rst
 
