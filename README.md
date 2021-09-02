@@ -1,7 +1,8 @@
 # mpvreadtime
 seek to times in mpv by typing them into the terminal window
 
-the use case is when you have a list of times you want to play.   the easist way to do this is to type the time needed, and hit return.  the mpv player should instantly seek to that time 
+the use case is when you have a list of times you want to play.   the easist way to do this is to type the time needed, and hit return.  the mpv player should instantly seek to that time.  
+If you need changes, I'm willing to talk. 
 
 ## Usage 
 **Run the script with the files you wish to play in mpv**.    
