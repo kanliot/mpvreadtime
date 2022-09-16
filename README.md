@@ -13,3 +13,4 @@ then close mpv when you're done. easy.
 after this script runs mpv, mpvreadtime will give you a prompt, since it must be run in a terminal, at which time you can start seeking in the mpv window that's playing.
 
 this stand-alone perl script should work on any linux-like system with mkfifo and socat.
+`mpvchapter` is provided as a demo how to play a random chapter

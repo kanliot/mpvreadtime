@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+# this program is a quick demo
+# the question was, how do I play a random chapter (in such a video file that has them) in mpv. 
+# this program takes 1 or 0 arguments, then outputs a command to play a random chapter, but doesn't track what was played in any way.
+
+# oh god                  --start='#2' --end='#4' Plays chapters 2 and 3, and exits.
+
+
+our $def = '/mea/dirtgrub/watts/Spider-Man.No.Way.Home.2021.720p.10bit.BluRay.6CH.x265.HEVC-PSA/Spider-Man.No.Way.Home.2021.720p.10bit.BluRay.6CH.x265.HEVC-PSA.mkv';
+
+# copyright 2021 kanliot@github
+# https://perldoc.perl.org/perlartistic for license
+
+my $file = shift;
+if ($file) { 
+	$def = $file;
+}
+
+use strict;
+use 5.10.0; # for say
+sub quoteforshell { return join ' ', map  "'" . s/'/'\\''/gr . "'", @_; }
+
+
+open (FH, '-|', '2>&1 ffmpeg -i '.  $def) or die;
+
+our @start;our @end; 
+# first grep from ffmpeg, then put chapter times in two different arrays
+while(<FH>) { 
+	if(/start ([.0-9]*), end\s*([.0-9]*)/) {
+		push @start,$1;
+		push @end, $2;
+	}
+}
+
+my $i = int(  rand $#start+1);  # get index of random chapter 
+say "mpv $def --start=$start[$i] --end=$end[$i]";  # fin
