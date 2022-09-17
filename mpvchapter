@@ -34,4 +34,5 @@ while(<FH>) {
 }
 
 my $i = int(  rand $#start+1);  # get index of random chapter 
-say "mpv $def --start=$start[$i] --end=$end[$i]";  # fin
+print "mpv $def ", quoteforshell  $def;
+say " --start=$start[$i] --end=$end[$i]";  # fin
