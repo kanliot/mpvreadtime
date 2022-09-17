@@ -4,18 +4,20 @@
 
 # todo: fix garbage when current directory is no longer existing.  i think it's `sh` complaining but... why does it do 5 times? 
 # i guess (sh complains) twice for checkexistscommand and once for `pgrep mpv`? 
+
 use v5.10;
 my $progname='mpvarguments';
 
 use Getopt::Long;
-my ($interactive, $help, $pids, $rename); 
+my ($quotedoutput, $interactive, $help, $pids, $rename); 
 GetOptions( h, \$help, help,\$help,
 		p, \$pids,
 		pid, \$pids, 
 		'rename', \$rename,
 		r, \$rename, 
 		i, \$interactive,
-		interactive, \$interactive);
+		interactive, \$interactive, 
+		'q', \$quotedoutput);
 		
 say("$progname. Ask linux for the arguments to each file launched to mpv."),  Getopt::Long::HelpMessage if $help;
 
@@ -30,6 +32,8 @@ sub check_exists_command {
 }
 check_exists_command 'pgrep' or die "$0 requires pgrep";
 
+sub quoteforshell { return join ' ', map  "'" . s/'/'\\''/gr . "'", @_; }
+
 my @data=<DATA>;
 chomp @data;
 
@@ -41,6 +45,7 @@ mpvarguments [options]
    -h, -help            brief help message
    -p, -pid		also print pid, usefull for sleep timer
    -r, -rename		call a rename script
+   -q			make the output with shell quotes, as to allow easy copy/paste
  
  default operation requires no arguments, and simply prints each open file with full path to the terminal. (good for script)
  mpvarguments requires pgrep to grab data
@@ -102,11 +107,16 @@ for(`pgrep mpv\$`) {  # while (each ``) didn't work no idea.
 			say $a;
 			next;
 		}
-		if (not $a =~ /^\//) { 
+		my $fn; 
+		if (not $a =~ /^\//) {  # has full path? 
 			# since we don't have the full path of the file, we can build it by grabbing the cwd from /proc
 			$cwd or do { $cwd= readlink "/proc/$pid/cwd"; chomp $cwd;}; 
-			say "$cwd/", $a;
-		} else { say $a }
+			$fn = "$cwd/". $a;
+		} else { $fn = $a }
+		if ($quotedoutput) { 
+			$fn = quoteforshell $fn;
+		}
+		say $fn;
 	}
 }
 
