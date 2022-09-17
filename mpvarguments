@@ -41,7 +41,8 @@ mpvarguments [options]
    -h, -help            brief help message
    -p, -pid		also print pid, usefull for sleep timer
    -r, -rename		call a rename script
-
+ 
+ default operation requires no arguments, and simply prints each open file with full path to the terminal. (good for script)
  mpvarguments requires pgrep to grab data
  the script doesn't really know the difference between arguments and filenames, but tries to filter out arguments, for each line at the bottom of the script. 
  pid mode is easy to automate, it prints: "$pidno\t$filename" 
