@@ -1,0 +1,142 @@
+#!/usr/bin/perl
+# basic idea here is to do 'pgrep -a mpv ' and then return the list of files open in mpv,(since i have 4-5 instances of mpv running)  but without all the option arguments, and only a single file or directory on each line, (no quoting semantics)
+# yes, it's buggy 
+
+# todo: fix garbage when current directory is no longer existing.  i think it's `sh` complaining but... why does it do 5 times? 
+# i guess (sh complains) twice for checkexistscommand and once for `pgrep mpv`? 
+use v5.10;
+my $progname='mpvarguments';
+
+use Getopt::Long;
+my ($interactive, $help, $pids, $rename); 
+GetOptions( h, \$help, help,\$help,
+		p, \$pids,
+		pid, \$pids, 
+		'rename', \$rename,
+		r, \$rename, 
+		i, \$interactive,
+		interactive, \$interactive);
+		
+say("$progname. Ask linux for the arguments to each file launched to mpv."),  Getopt::Long::HelpMessage if $help;
+
+use warnings;
+use open qw(:std :utf8); # required.
+use feature 'unicode_strings';
+
+
+sub check_exists_command { 
+	my $check = `sh -c 'command -v $_[0]'`; 
+	return $check;
+}
+check_exists_command 'pgrep' or die "$0 requires pgrep";
+
+my @data=<DATA>;
+chomp @data;
+
+=head1 SYNOPSIS
+
+mpvarguments [options] 
+
+ Options:
+   -h, -help            brief help message
+   -p, -pid		also print pid, usefull for sleep timer
+   -r, -rename		call a rename script
+
+ mpvarguments requires pgrep to grab data
+ the script doesn't really know the difference between arguments and filenames, but tries to filter out arguments, for each line at the bottom of the script. 
+ pid mode is easy to automate, it prints: "$pidno\t$filename" 
+
+=cut
+
+if (  $interactive) { # actually seems to work if we close STDOUT
+	open STDOUT, "|~/perl/curses-pipe-thing.pl"or die; 
+} elsif ($rename ) { 
+	open STDOUT, "|renamer"or die; 
+}
+
+sub readfile {
+	open my $fh,  $_[0] or die;
+	my @lines =<$fh> ;
+	return join '', @lines;
+}
+
+
+for(`pgrep mpv\$`) {  # while (each ``) didn't work no idea.
+	my $pid=int $_; # convert lines of `` into pids 
+	my $cl_path='/proc/'.$pid.'/cmdline'; 
+	$_=readfile $cl_path;
+
+			
+	
+
+# special handling for this argument "--title=fhomet absasdvbev" and "--playlist=/dev/fd/66"
+# split $_ and remove the --title thing
+# and for --playlist=/dev/56, mangle the fd number, but keep it. 
+	my @t_args = split /\x{0}+/, $_;
+	my @td_args; 
+	for (my ($i,$g) = each @t_args;defined $i and $i<=$#t_args;($i,$g)=each @t_args) { 
+		$g=~/^--title=fhomet / and do { $g = "/$g"};
+		$g=~m.^--playlist=/dev/fd/. and next;
+		push @td_args, $g;
+	}
+	$_ = join "\x0", @td_args; 
+# end bad stuff 
+
+	sub outpt { 
+	my $text_to_filter_out = shift; my $input = $_;
+	$_ = join "\x0", grep { $_ ne $text_to_filter_out } split /\x{0}+/, $input ;
+	} # cute function to grep each part of line ($_) with argument after splitting it on ' '  i never wrote this
+	for my $f( @data){
+		outpt($f) 
+		}
+
+# $_ is now a string with nulls from the command line... with some strings removed... 
+	s/^--playlist=\/dev\/fd\/\d+/\/dev\/fd\/\?\?\?/;  # show the pipe, but make it /dev/fd/??? instead of /dev/fd/somenum
+#sigh. just split $_
+	my $cwd; 
+	for $a (split "\x0",$_) { 
+		print "$pid\t" if $pids;
+		next if 0 == length$a; 
+		if ( $a =~ /https?:\/\// ) { # needed. otherwise it mangles when mpv is playing urls
+			say $a;
+			next;
+		}
+		if (not $a =~ /^\//) { 
+			# since we don't have the full path of the file, we can build it by grabbing the cwd from /proc
+			$cwd or do { $cwd= readlink "/proc/$pid/cwd"; chomp $cwd;}; 
+			say "$cwd/", $a;
+		} else { say $a }
+	}
+}
+
+close STDOUT if $interactive or $rename; # kind of bugs me that i have to do this. shouldn't this get closed anyhow? 
+
+__DATA__
+/usr/bin/mpv
+mpv
+--vid=no
+--load-scripts=no
+--ytdl-format=251/140/bestaudio/worst
+--ytdl-format=140/bestaudio/worst
+--demuxer-readahead-secs=16
+--force-window
+--no-terminal
+--ytdl-format=[height=360]
+--fs
+-fs
+--player-operation-mode=pseudo-gui
+--audio-channels=stereo
+--af=lavfi=[loudnorm]
+--
+--autofit-smaller
+x960
+--no-audio-display
+--no-video
+--window-scale=2
+--audio=no
+--monitoraspect=16:9
+--no-resume-playback
+--audio-display=attachment
+--quiet
+--audio-device=pulse/alsa_output.usb-0d8c_C-Media_USB_Headphone_Set-00.analog-stereo
+--force-window=yes

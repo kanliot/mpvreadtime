@@ -1,0 +1,17 @@
+#!/usr/bin/perl
+
+# works.
+# this program calls pgrep to get a list of files open by mpv
+# then it outputs the /proc file descriptor so you can recover the file you just deleted
+
+# output is human readable, just scroll down until you see the program that is still running, and you can `cp` out from the file descriptor, i mean you can then cp out the proc pathname back to a new file
+
+sub prin { 
+	while ($a = shift @_, $b=shift @_) {
+		print "$a\n\t$b\n\n";
+	}
+}
+for my $pid(`pgrep \\\\bmpv\$`) { 
+	chomp $pid;
+	prin map { ($_, readlink $_) } glob "/proc/$pid/fd/*";
+}
